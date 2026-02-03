@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Login E-Parking</title>
+    <style>
+        body { background: #2c3e50; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-box { background: white; padding: 40px; border-radius: 12px; width: 320px; box-shadow: 0 15px 25px rgba(0,0,0,0.2); text-align: center; }
+        h2 { color: #2c3e50; margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        button:hover { background: #2980b9; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h2>LOGIN UKK</h2>
+        <input type="text" id="user" placeholder="Username">
+        <input type="password" id="pass" placeholder="Password">
+        <button onclick="prosesLogin()">MASUK</button>
+    </div>
+
+    <script>
+        async function prosesLogin() {
+            const username = document.getElementById('user').value;
+            const password = document.getElementById('pass').value;
+
+            try {
+                const res = await fetch('http://localhost:3000/api/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username, password})
+                });
+                const data = await res.json();
+
+                if(data.success) {
+                    alert('Login Berhasil sebagai ' + data.user.role);
+                    // Arahkan ke folder admin/petugas/owner
+                    if(data.user.role === 'admin') window.location.href = '../admin/index.html';
+                    else if(data.user.role === 'petugas') window.location.href = '../petugas/index.html';
+                    else window.location.href = '../owner/index.html';
+                } else {
+                    alert(data.message);
+                }
+            } catch (err) {
+                alert('Server Belum Jalan! Jalankan node server.js di terminal.');
+            }
+        }
+    </script>
+</body>
+</html>

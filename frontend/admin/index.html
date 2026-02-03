@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin - E-Parking</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f4; margin: 0; display: flex; }
+        .sidebar { width: 200px; background: #333; color: white; height: 100vh; padding: 20px; }
+        .main { flex: 1; padding: 20px; }
+        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background: #eee; }
+        input, select { padding: 8px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
+        button { padding: 10px; background: #28a745; color: white; border: none; cursor: pointer; width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>ADMIN</h2>
+        <hr>
+        <p>Kelola Data</p>
+        <a href="../auth/login.html" style="color:red">Logout</a>
+    </div>
+    <div class="main">
+        <div class="card">
+            <h3>Tambah Area Parkir</h3>
+            <input type="text" id="n_area" placeholder="Nama Area">
+            <input type="number" id="k_area" placeholder="Kapasitas">
+            <button onclick="addArea()">Simpan Area</button>
+            <table>
+                <thead><tr><th>Area</th><th>Kapasitas</th><th>Terisi</th></tr></thead>
+                <tbody id="t_area"></tbody>
+            </table>
+        </div>
+        <div class="card">
+            <h3>Tambah Tarif</h3>
+            <select id="j_kendaraan">
+                <option value="motor">Motor</option>
+                <option value="mobil">Mobil</option>
+            </select>
+            <input type="number" id="t_harga" placeholder="Harga per Jam">
+            <button onclick="addTarif()">Simpan Tarif</button>
+            <table>
+                <thead><tr><th>Jenis</th><th>Tarif</th></tr></thead>
+                <tbody id="t_tarif"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function loadData() {
+            const resA = await fetch('http://localhost:3000/api/area');
+            const areas = await resA.json();
+            document.getElementById('t_area').innerHTML = areas.map(a => `<tr><td>${a.nama_area}</td><td>${a.kapasitas}</td><td>${a.terisi}</td></tr>`).join('');
+
+            const resT = await fetch('http://localhost:3000/api/tarif');
+            const tarifs = await resT.json();
+            document.getElementById('t_tarif').innerHTML = tarifs.map(t => `<tr><td>${t.jenis_kendaraan}</td><td>${t.tarif_per_jam}</td></tr>`).join('');
+        }
+
+        async function addArea() {
+            await fetch('http://localhost:3000/api/area', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ nama_area: document.getElementById('n_area').value, kapasitas: document.getElementById('k_area').value })
+            });
+            loadData();
+        }
+
+        async function addTarif() {
+            await fetch('http://localhost:3000/api/tarif', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ jenis_kendaraan: document.getElementById('j_kendaraan').value, tarif_per_jam: document.getElementById('t_harga').value })
+            });
+            loadData();
+        }
+        loadData();
+    </script>
+</body>
+</html> 

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Petugas - E-Parking</title>
+    <style>
+        :root {
+            --p: #4361ee;
+            --bg: #f8f9ff;
+            --dark: #1e1e2d;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            margin: 0;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: var(--dark);
+            color: white;
+            height: 100vh;
+            padding: 30px;
+            position: fixed;
+        }
+
+        .content {
+            margin-left: 300px;
+            padding: 40px;
+            width: 100%;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+            margin-bottom: 25px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        .btn {
+            background: var(--p);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+
+        th {
+            color: #666;
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+
+        /* PRINT STYLE */
+        #struk {
+            display: none;
+            text-align: center;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+
+            #struk,
+            #struk * {
+                visibility: visible;
+            }
+
+            #struk {
+                display: block;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <h2>E-PARKING</h2>
+        <p>Menu Petugas</p>
+        <button class="btn" onclick="location.href='../auth/login.html'"
+            style="background:#ff4757; margin-top:50px">Logout</button>
+    </div>
+
+    <div class="content">
+        <div class="card">
+            <h3 style="margin-top:0">🚗 Check-In Kendaraan</h3>
+            <input type="text" id="plat" placeholder="Nomor Plat (Contoh: B 1234 ABC)">
+            <select id="area"></select>
+            <select id="tarif"></select>
+            <button class="btn" onclick="checkIn()">MASUK & CETAK TIKET</button>
+        </div>
+
+        <div class="card">
+            <h3>Kendaraan di Dalam</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Waktu Masuk</th>
+                        <th>Plat</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="t_aktif"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="struk">
+        <h3>STRUK PARKIR UKK</h3>
+        <p>---------------------------</p>
+        <h1 id="p_plat"></h1>
+        <p id="p_waktu"></p>
+        <p>---------------------------</p>
+        <p>Terima Kasih</p>
+    </div>
+
+    <script>
+        const id_u = localStorage.getItem('id_user');
+
+        async function load() {
+            try {
+                const [ra, rt, rk] = await Promise.all([
+                    fetch('http://localhost:3000/api/area'),
+                    fetch('http://localhost:3000/api/tarif'),
+                    fetch('http://localhost:3000/api/kendaraan-aktif')
+                ]);
+
+                if (!ra.ok || !rt.ok || !rk.ok) throw new Error('Gagal memuat data');
+
+                const areas = await ra.json();
+                document.getElementById('area').innerHTML = '<option value="">-- Pilih Area --</option>' + areas.map(a => `<option value="${a.id_area}">${a.nama_area} (Sisa: ${a.kapasitas - a.terisi})</option>`).join('');
+
+                const tarifs = await rt.json();
+                document.getElementById('tarif').innerHTML = '<option value="">-- Pilih Tarif --</option>' + tarifs.map(t => `<option value="${t.id_tarif}">${t.jenis_kendaraan} - Rp${t.tarif_per_jam}</option>`).join('');
+
+                const aktif = await rk.json();
+                document.getElementById('t_aktif').innerHTML = aktif.map(k => `
+                        
+                        <td>${new Date(k.waktu_masuk).toLocaleTimeString()}</td>
+                        <td><b>${k.plat_nomor}</b></td>
+                        <td><button onclick="checkOut(${k.id_parkir})" style="color:#4361ee; border:none; background:none; cursor:pointer; font-weight:bold;">KELUAR</button></td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading data:', error);
+                alert('Gagal memuat data. Silakan refresh halaman.');
+            }
+        }
+
+        async function checkIn() {
+            const plat = document.getElementById('plat').value;
+            const area = document.getElementById('area').value;
+            const tarif = document.getElementById('tarif').value;
+
+            if (!plat) return alert("Isi Plat Nomor!");
+            if (!area) return alert("Pilih Area Parkir!");
+            if (!tarif) return alert("Pilih Tarif!");
+
+            const body = {
+                plat_nomor: plat,
+                id_area: area,
+                id_tarif: tarif,
+                jenis_kendaraan: "motor",
+                id_user: id_u
+            };
+
+            try {
+                const response = await fetch('http://localhost:3000/api/transaksi/masuk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!response.ok) throw new Error('Gagal check-in');
+
+                document.getElementById('p_plat').innerText = plat;
+                document.getElementById('p_waktu').innerText = new Date().toLocaleString();
+                window.print();
+                load();
+                document.getElementById('plat').value = '';
+            } catch (error) {
+                alert('Terjadi kesalahan: ' + error.message);
+            }
+        }
+
+        async function checkOut(id) {
+            try {
+                const r = await fetch('http://localhost:3000/api/transaksi/keluar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id_parkir: id })
+                });
+
+                if (!r.ok) throw new Error('Gagal check-out');
+
+                const res = await r.json();
+                alert("Total Biaya: Rp " + res.biaya);
+                load();
+            } catch (error) {
+                alert('Terjadi kesalahan: ' + error.message);
+            }
+        }
+
+        load();
+    </script>
+</body>
+
+</html>
